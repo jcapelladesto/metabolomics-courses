@@ -1,5 +1,5 @@
 ```{r echo=F}
-setwd("C:/Users/User/Documents/December2017")
+setwd("C:/Users/User/Documents/metabolomics-courses/December2017/")
 library(knitr)
 opts_knit$set(cache=FALSE )
 ```
@@ -25,8 +25,8 @@ In summary the data analysis pipeline for feature-oriented mass-spectrometry bas
   * Peak grouping (`group()`): Transform ion peaks to _features_. Group ion peaks with a similar retention time and m/z values across samples. This results in a unique value of m/z and retention time (mzRT feature) for different peaks that will be used to compare sample groups.
   * NA value imputation (`fillPeaks()`): If a feature intensity/area value is missing in any sample group, this function imputes an intensity value. After peak grouping, there will always be peak groups that do not include peaks from every sample. This method produces intensity values for those missing samples by integrating raw data in peak group region.
   * If you want to learn more about `xcms`, please check:
-    + `xcms` vignette: `vignette("xcmsPreprocess")`
-    + [workflow4metabolomics xcms material](http://workflow4metabolomics.org/sites/workflow4metabolomics.org/files/files/w4e-2016-MSprocessing_LC-MS.pdf)
+      + `xcms` vignette: `vignette("xcmsPreprocess")`
+      + [workflow4metabolomics xcms material](http://workflow4metabolomics.org/sites/workflow4metabolomics.org/files/files/w4e-2016-MSprocessing_LC-MS.pdf)
 3. Feature matrix data analysis
   * Feature filtering
   * Statistical testing
@@ -36,9 +36,9 @@ In summary the data analysis pipeline for feature-oriented mass-spectrometry bas
   This step is not compulsoray and is currently one of the main challenges in untargeted metabolomics data analysis.
   * Database matching: Features that pass statistical significance are considered candidate metabolites that explain the differences found. To identify them, we require using a list of possible adducts and database that represents (as well as possible) the metabolite matrix we should expect in our samples. Though, a database match represents just a putative metabolite identity assignment, we require further experiments to confirm that identification.
   Some examples of metabolites databases:
-    + [Human metabolome database](http://hmdb.ca)
-    + [Massbank](http://www.massbank.jp/)
-    + [Metlin](https://metlin.scripps.edu/)
+      + [Human metabolome database](http://hmdb.ca)
+      + [Massbank](http://www.massbank.jp/)
+      + [Metlin](https://metlin.scripps.edu/)
   * MS/MS experiments: Retention time confirmation and/or MS/MS fragmentation of a model pure compound to that from the ion of interest is necessary to uniquivocally identify metabolites. See [Metabolomics Standard Initiative](http://www.metabolomics-msi.org/).
 
 ---------------------------------------------------------
@@ -190,6 +190,8 @@ scores.plot <- ggplot(data=scores,aes(x=PC1, y=PC2, colour=class))+
   geom_text(data=scores, mapping=aes(x=PC1, y=PC2, label=lab),size=4, vjust=3, hjust=3)+
   geom_hline(yintercept = 0)+
   geom_vline(xintercept = 0)+
+	xlab(paste("PC1 (",round(summary(pca)$importance[2,1],2)*100,"%)"))+
+	ylab(paste("PC2 (",round(summary(pca)$importance[2,2],2)*100,"%)"))+		 	
 	stat_ellipse()
 
 scores.plot
@@ -421,7 +423,7 @@ write.csv(file="resultstoMSMS.csv", x=feature.msms)
 ```
 
 There is two options when performing your putative identification search against metabolite databases:
-* Perform batch searches in METLIN -link- or HMDB -link-. Where you have to load a list of m/z values and select from a list of adducts and define a PPM error.
+* Perform batch searches in METLIN or HMDB. Where you have to load a list of m/z values and select from a list of adducts and define a PPM error.
 + The database is always up-to-date
 - "Limited" number of adducts
 * Download (or build your own) a database and perform the search programmatically.
@@ -429,29 +431,28 @@ There is two options when performing your putative identification search against
 + Any adducts can be search (in-house list of adducts)
 - Needs to be updated
 
-How to download HMDB database:
-Go to hmdb.ca
+#How to download HMDB database:  
+Go to [hmdb.ca](http://hmdb.ca)  
 Browse Metabolites > Extract data > Apply filters if necessary > Select columns (Name, monoisotopic mass) > Download
 
+## Search our mzRT into a downloaded database
 
-negative <- read.table("Negative_ESI.txt",header=T,stringsAsFactors=F)
-positive <- read.table("Positive_ESI.txt",header=T,stringsAsFactors=F) 
-hmdb <- read.table("C:/Users/User/Documents/R-CWD/HMDB_17_09.txt",header=T,sep="\t",
-									 stringsAsFactors=F,fill=T,quote="")
+This simple function will perform a search into our downloaded HMDB database. Here, we are using the most common adducts, remember that there is multiple types of adducts, and depending on the mobile phases some may be expected or not.
 
-aixo es l'script
+```{r fig.align="center", fig.width=10, tidy=TRUE, comment=NA}
+# files with adducts masses
+negative <- read.table("./data/Negative_ESI.txt",header=T,stringsAsFactors=F)
+positive <- read.table("./data/Positive_ESI.txt",header=T,stringsAsFactors=F) 
+# HMDB database
+hmdb <- read.table("./data/HMDB_17_09.txt",header=T,sep="\t",stringsAsFactors=F,fill=T,quote="")
 
-input és el vector de masses en forma numerica, ara mateix esta per fer negatiu si ho vols canviar fes un reemplazar "negative" per "positive".
-
-Si no ten ensurts dema ho mirem
-
-
-
-input <- itworksdf$mzmed
+# list of significant features' m/z
+input <- feature.msms$mzmed
+# ppm error to perform the search. Instrument dependant (e.g. orbitrap 2-6; qTOF 8-12)
 ppm <- 10
 
 hmdbhits <- lapply(input,function(x){
-	search_vect <- (x+negative$IsotopicMass)
+	search_vect <- (x+positive$AdductMass) # here we are using positive ionisation
 	h <- lapply(search_vect,function(x){
 	mass_range <- c(x-ppm*(x/1e6),x+ppm*(x/1e6))
 	a <- which(hmdb$MonoisotopicMass>mass_range[1] & hmdb$MonoisotopicMass<mass_range[2]) 
@@ -469,6 +470,11 @@ hmdbhits <- lapply(input,function(x){
 	
 	return(h2)
 })
+
+hmdbhits <- do.call("rbind",hmdbhits)
+colnames(hmdbhits) <-  positive$Adduct
+head(hmdbhits)
+```
 
 *****
 *****
@@ -494,7 +500,7 @@ In the case of geoRge, we assume that labelled isotopologues are equivalent to "
 
 ## geoRge pipeline
 
-geoRge is currently only available in GitHub (github.com/jcapelladesto/george), so in this case we need to install the package using **devtools**.
+geoRge is currently only available in [GitHub](https://github.com/jcapelladesto/geoRge), so in this case we need to install the package using **devtools**.
 ```{r eval=FALSE}
 #install.packages("devtools", dependencies=TRUE)
 library(devtools) 
@@ -503,7 +509,7 @@ install_github("jcapelladesto/geoRge")
 
 ```
 
-The package itself contains an example **xcmsSet** from Metabolights 213 (link).
+The package itself contains an example **xcmsSet** from [Metabolights-213](https://www.ebi.ac.uk/metabolights/MTBLS213) .
 
 ```{r echo=FALSE}
 library(geoRge) 
@@ -553,12 +559,36 @@ hits <- database_query(geoRgeR = s2, adducts = negative, db = db)
 head(hits)
 ```
 
-
+Build final summary table:
 ```{r fig.align="center", fig.width=10, tidy=TRUE, comment=NA}
 final <- cbind(s2$geoRge,s3,hits)
-head(final)
 ```
 
+```{r fig.align="center", fig.width=10, tidy=TRUE, comment=NA}
+#some examples
+# glucose
+final[41:42,]
+```
+
+```{r fig.align="center", fig.width=10, tidy=TRUE, comment=NA}
+# fucoses biphosphate
+final[472:479,]
+```
+
+```{r fig.align="center", fig.width=10, tidy=TRUE, comment=NA}
+# phosphoenol-pyruvic
+final[35:36,]
+```
+
+```{r fig.align="center", fig.width=10, tidy=TRUE, comment=NA}
+# citric acid
+final[49:51,]
+```
+
+```{r fig.align="center", fig.width=10, tidy=TRUE, comment=NA}
+# glutamic acid
+final[25:28,]
+```
 
 As in standard untargeted metabolomics experiments, the features identity needs to be confirmed through MS/MS experiments and/or retention time confirmation. An additional level of information that can be extracted is that, if labelled isotopologues are fragmented, it is possible to elucidate which part of the molecule contained the **x** number of labelled atoms.
 
