@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ```{r echo=F}
 setwd("C:/Users/User/Documents/metabolomics-courses/December2017/")
 library(knitr)
@@ -1218,4 +1217,3 @@ my.t.test<-function(df,classvec,classA,classB,var.equal=T){
 
 ```
 
->>>>>>> 6fb3c00554aa04d94ca61452bd719e77aedde66d
