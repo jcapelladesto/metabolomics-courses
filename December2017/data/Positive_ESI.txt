@@ -1,3 +1,17 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:c9d4c34b135cf02e4e38f239169564001dfe1032861ba4b8f07544a60f63b8f4
-size 303
+<<<<<<< HEAD
+Adduct	AdductMass
+M+H	-1.007276
+M+NH4	-18.033823
+M+Na	-22.989218
+M+K	-38.963158
+M+H-H2O	17.0027
+M+H-2H2O	35.0128
+=======
+Adduct	AdductMass
+M+H	-1.007276
+M+NH4	-18.033823
+M+Na	-22.989218
+M+K	-38.963158
+M+H-H2O	17.0027
+M+H-2H2O	35.0128
+>>>>>>> 6fb3c00554aa04d94ca61452bd719e77aedde66d
